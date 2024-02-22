@@ -1,0 +1,4 @@
+zephyr_library()
+
+zephyr_library_sources_ifdef(CONFIG_INPUT_ANALOG_JOYSTICK input_analog_joystick.c)
+zephyr_include_directories(${APPLICATION_SOURCE_DIR}/include)
