@@ -35,6 +35,13 @@ static void joystick_timer_cb(struct k_timer *timer) {
   k_work_submit_to_queue(&joystick_work_q, &data->work);
 }
 
+static inline int32_t normalize(int32_t mv, int32_t min_mv, int32_t max_mv) {
+  double val =
+      CLAMP(2.0 * (mv < min_mv ? 0 : mv - min_mv) / (max_mv - min_mv) - 1.0,
+            -1.0, 1.0);
+  return (int32_t)(127 * val);
+}
+
 static void joystick_work_cb(struct k_work *work) {
   struct joystick_data *data = CONTAINER_OF(work, struct joystick_data, work);
   const struct device *dev = data->dev;
@@ -53,14 +60,9 @@ static void joystick_work_cb(struct k_work *work) {
                         seq->resolution, &x_mv);
   adc_raw_to_millivolts(adc_ref_internal(data->adc), ADC_GAIN_1_6,
                         seq->resolution, &y_mv);
-  LOG_DBG("Raw ADC: x: %d y: %d", x_mv, y_mv);
 
-  int16_t dx =
-      (int16_t)(INT16_MAX *
-                (2.0 * x_mv / (config->max_mv - config->min_mv) - 1.0));
-  int16_t dy =
-      (int16_t)(INT16_MAX *
-                (2.0 * y_mv / (config->max_mv - config->min_mv) - 1.0));
+  int32_t dx = normalize(x_mv, config->min_mv, config->max_mv);
+  int32_t dy = normalize(y_mv, config->min_mv, config->max_mv);
 
   input_report_rel(dev, INPUT_REL_X, dx, false, K_FOREVER);
   input_report_rel(dev, INPUT_REL_X, dy, true, K_FOREVER);
@@ -71,8 +73,8 @@ static int joystick_channel_setup(const struct device *adc, uint8_t channel_id,
   struct adc_channel_cfg channel_cfg = {
       .gain = ADC_GAIN_1_6,
       .reference = ADC_REF_INTERNAL,
-      .acquisition_time = ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 40),
-      .channel_id = channel_id,
+      .acquisition_time = ADC_ACQ_TIME_DEFAULT,
+      .channel_id = 1 + channel_id,
       .input_positive = ADC_INPUT_POS_OFFSET + adc_channel,
   };
 
@@ -104,7 +106,8 @@ static int joystick_init(const struct device *dev) {
   }
 
   data->adc_seq = (struct adc_sequence){
-      .channels = BIT(X_AXIS_TO_ADC_CHAN_ID) | BIT(Y_AXIS_TO_ADC_CHAN_ID),
+      .channels =
+          BIT(1 + X_AXIS_TO_ADC_CHAN_ID) | BIT(1 + Y_AXIS_TO_ADC_CHAN_ID),
       .buffer = data->buffer,
       .buffer_size = sizeof(data->buffer),
       .oversampling = 0,
@@ -118,7 +121,7 @@ static int joystick_init(const struct device *dev) {
                      CONFIG_INPUT_ANALOG_JOYSTICK_WORKQUEUE_PRIORITY, NULL);
 
   k_timer_init(&data->timer, joystick_timer_cb, NULL);
-  k_timer_start(&data->timer, K_NO_WAIT, K_MSEC(10));
+  k_timer_start(&data->timer, K_NO_WAIT, K_MSEC(100));
   return rc;
 }
 
