@@ -64,8 +64,8 @@ static void joystick_work_cb(struct k_work *work) {
   int32_t dx = normalize(x_mv, config->min_mv, config->max_mv);
   int32_t dy = normalize(y_mv, config->min_mv, config->max_mv);
 
-  input_report_rel(dev, INPUT_REL_X, dx, false, K_FOREVER);
-  input_report_rel(dev, INPUT_REL_X, dy, true, K_FOREVER);
+  input_report_abs(dev, INPUT_ABS_X, dx, false, K_FOREVER);
+  input_report_abs(dev, INPUT_ABS_Y, dy, true, K_FOREVER);
 }
 
 static int joystick_channel_setup(const struct device *adc, uint8_t channel_id,
