@@ -1,6 +1,7 @@
 menuconfig INPUT_ANALOG_JOYSTICK
     bool "Joystick Sensor"
     select ADC
+    select INPUT
     help
       Enable driver for Joystick sensor
 
