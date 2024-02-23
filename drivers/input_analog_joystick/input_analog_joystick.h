@@ -7,11 +7,9 @@
 
 struct joystick_data {
   const struct device *adc;
-  struct adc_sequence as;
-  int16_t xy_raw[2];
-  sensor_trigger_handler_t trigger_handler;
-  struct sensor_trigger trigger;
-  int32_t trigger_fs;
+  const struct device *dev;
+  struct adc_sequence adc_seq;
+  int32_t buffer[2];
   struct k_timer timer;
   struct k_work work;
 };
