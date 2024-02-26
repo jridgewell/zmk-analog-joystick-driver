@@ -40,7 +40,8 @@ static inline int32_t normalize(int32_t mv, int32_t min_mv, int32_t max_mv,
   double val =
       CLAMP(2.0 * (mv < min_mv ? 0 : mv - min_mv) / (max_mv - min_mv) - 1.0,
             -1.0, 1.0);
-  return (abs(val) < dead_zone) ? 0 : (int32_t)(127 * val);
+  int32_t res = (int32_t)(127 * val);
+  return (abs(res) < dead_zone) ? 0 : res;
 }
 
 static void joystick_work_cb(struct k_work *work) {
@@ -124,26 +125,26 @@ static int joystick_init(const struct device *dev) {
                      CONFIG_INPUT_ANALOG_JOYSTICK_WORKQUEUE_PRIORITY, NULL);
 
   k_timer_init(&data->timer, joystick_timer_cb, NULL);
-  k_timer_start(&data->timer, K_NO_WAIT, K_MSEC(100));
+  k_timer_start(&data->timer, K_NO_WAIT, K_MSEC(8));
   return rc;
 }
 
-#define JOYSTICK_INST(n)                                                  \
-  static struct joystick_data joystick_data_##n = {                       \
-      .adc = DEVICE_DT_GET(DT_INST_IO_CHANNELS_CTLR_BY_NAME(n, x_axis))}; \
-                                                                          \
-  static const struct joystick_config joystick_config_##n = {             \
-      .channel_x = DT_INST_IO_CHANNELS_INPUT_BY_NAME(n, x_axis),          \
-      .channel_y = DT_INST_IO_CHANNELS_INPUT_BY_NAME(n, y_axis),          \
-      .max_mv = DT_INST_PROP(n, max_mv),                                  \
-      .min_mv = COND_CODE_0(DT_INST_NODE_HAS_PROP(n, min_mv), (0),        \
-                            (DT_INST_PROP(n, min_mv))),                   \
-      .dead_zone = COND_CODE_0(DT_INST_NODE_HAS_PROP(n, dead_zone), (0),  \
-                               (DT_INST_PROP(n, dead_zone))),             \
-  };                                                                      \
-                                                                          \
-  DEVICE_DT_INST_DEFINE(n, joystick_init, NULL, &joystick_data_##n,       \
-                        &joystick_config_##n, POST_KERNEL,                \
+#define JOYSTICK_INST(n)                                                       \
+  static struct joystick_data joystick_data_##n = {                            \
+      .adc = DEVICE_DT_GET(DT_INST_IO_CHANNELS_CTLR_BY_NAME(n, x_axis))};      \
+                                                                               \
+  static const struct joystick_config joystick_config_##n = {                  \
+      .channel_x = DT_INST_IO_CHANNELS_INPUT_BY_NAME(n, x_axis),               \
+      .channel_y = DT_INST_IO_CHANNELS_INPUT_BY_NAME(n, y_axis),               \
+      .max_mv = DT_INST_PROP(n, max_mv),                                       \
+      .min_mv = COND_CODE_0(DT_INST_NODE_HAS_PROP(n, min_mv), (0),             \
+                            (DT_INST_PROP(n, min_mv))),                        \
+      .dead_zone = COND_CODE_0(DT_INST_NODE_HAS_PROP(n, dead_zone), (0),       \
+                               (DT_INST_PROP(n, dead_zone))),                  \
+  };                                                                           \
+                                                                               \
+  DEVICE_DT_INST_DEFINE(n, joystick_init, NULL, &joystick_data_##n,            \
+                        &joystick_config_##n, POST_KERNEL,                     \
                         CONFIG_INPUT_INIT_PRIORITY, NULL);
 
 DT_INST_FOREACH_STATUS_OKAY(JOYSTICK_INST)
