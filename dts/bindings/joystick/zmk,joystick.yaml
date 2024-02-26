@@ -33,3 +33,9 @@ properties:
       Maximum voltage output on the potentiometer
 
       max-mv - min-mv will be the full range of potentiometer output
+
+  dead-zone:
+    type: int
+    required: false
+    description: |
+      Dead zone around the center wher the reading will snap to 0

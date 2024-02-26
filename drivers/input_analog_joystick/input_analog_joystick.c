@@ -35,11 +35,12 @@ static void joystick_timer_cb(struct k_timer *timer) {
   k_work_submit_to_queue(&joystick_work_q, &data->work);
 }
 
-static inline int32_t normalize(int32_t mv, int32_t min_mv, int32_t max_mv) {
+static inline int32_t normalize(int32_t mv, int32_t min_mv, int32_t max_mv,
+                                int32_t dead_zone) {
   double val =
       CLAMP(2.0 * (mv < min_mv ? 0 : mv - min_mv) / (max_mv - min_mv) - 1.0,
             -1.0, 1.0);
-  return (int32_t)(127 * val);
+  return (abs(val) < dead_zone) ? 0 : (int32_t)(127 * val);
 }
 
 static void joystick_work_cb(struct k_work *work) {
@@ -61,8 +62,10 @@ static void joystick_work_cb(struct k_work *work) {
   adc_raw_to_millivolts(adc_ref_internal(data->adc), ADC_GAIN_1_6,
                         seq->resolution, &y_mv);
 
-  int32_t dx = normalize(x_mv, config->min_mv, config->max_mv);
-  int32_t dy = normalize(y_mv, config->min_mv, config->max_mv);
+  int32_t dx =
+      normalize(x_mv, config->min_mv, config->max_mv, config->dead_zone);
+  int32_t dy =
+      normalize(y_mv, config->min_mv, config->max_mv, config->dead_zone);
 
   input_report_abs(dev, INPUT_ABS_X, dx, false, K_FOREVER);
   input_report_abs(dev, INPUT_ABS_Y, dy, true, K_FOREVER);
@@ -135,6 +138,8 @@ static int joystick_init(const struct device *dev) {
       .max_mv = DT_INST_PROP(n, max_mv),                                  \
       .min_mv = COND_CODE_0(DT_INST_NODE_HAS_PROP(n, min_mv), (0),        \
                             (DT_INST_PROP(n, min_mv))),                   \
+      .dead_zone = COND_CODE_0(DT_INST_NODE_HAS_PROP(n, dead_zone), (0),  \
+                               (DT_INST_PROP(n, dead_zone))),             \
   };                                                                      \
                                                                           \
   DEVICE_DT_INST_DEFINE(n, joystick_init, NULL, &joystick_data_##n,       \

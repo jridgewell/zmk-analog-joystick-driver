@@ -19,4 +19,5 @@ struct joystick_config {
   uint8_t channel_y;
   uint32_t min_mv;
   uint32_t max_mv;
+  uint32_t dead_zone;
 };
